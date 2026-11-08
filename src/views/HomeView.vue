@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import TheWelcome from '../components/TheWelcome.vue'
+import Fahrzeugliste from '@/components/Fahrzeugliste.vue'
 </script>
 
 <template>
   <main>
-    <TheWelcome />
+    <h2>Bestand</h2>
+    <Fahrzeugliste />
   </main>
 </template>
