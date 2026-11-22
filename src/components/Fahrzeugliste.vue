@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 
 interface Fahrzeug {
   id: number
@@ -13,77 +13,79 @@ interface Fahrzeug {
   reserviert: boolean
 }
 
-const fahrzeuge = ref<Fahrzeug[]>([
-  {
-    id: 1,
-    marke: 'VW',
-    modell: 'Golf',
-    baujahr: 2019,
-    kilometerstand: 62000,
-    einkaufspreis: 13500,
-    verkaufspreis: 15900,
-    favorit: true,
-    reserviert: false,
-  },
-  {
-    id: 2,
-    marke: 'Audi',
-    modell: 'A4',
-    baujahr: 2018,
-    kilometerstand: 89000,
-    einkaufspreis: 16000,
-    verkaufspreis: 18500,
-    favorit: false,
-    reserviert: true,
-  },
-  {
-    id: 3,
-    marke: 'BMW',
-    modell: '320d',
-    baujahr: 2020,
-    kilometerstand: 41000,
-    einkaufspreis: 22000,
-    verkaufspreis: 24900,
-    favorit: false,
-    reserviert: false,
-  },
-])
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
+
+const fahrzeuge = ref<Fahrzeug[]>([])
+const fehler = ref<string | null>(null)
+
+onMounted(async () => {
+  try {
+    const response = await fetch(`${API_URL}/fahrzeuge`)
+    if (!response.ok) {
+      throw new Error(`Server antwortete mit Status ${response.status}`)
+    }
+    fahrzeuge.value = await response.json()
+  } catch (e) {
+    fehler.value = 'Fahrzeuge konnten nicht geladen werden.'
+    console.error(e)
+  }
+})
+
+const numberFormat = new Intl.NumberFormat('de-DE')
+const currencyFormat = new Intl.NumberFormat('de-DE', {
+  style: 'currency',
+  currency: 'EUR',
+  maximumFractionDigits: 0,
+})
 </script>
 
 <template>
-  <table>
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Marke</th>
-        <th>Modell</th>
-        <th>Baujahr</th>
-        <th>Kilometerstand</th>
-        <th>Einkaufspreis</th>
-        <th>Verkaufspreis</th>
-        <th>Favorit</th>
-        <th>Reserviert</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr v-for="f in fahrzeuge" :key="f.id">
-        <td>{{ f.id }}</td>
-        <td>{{ f.marke }}</td>
-        <td>{{ f.modell }}</td>
-        <td>{{ f.baujahr }}</td>
-        <td>{{ f.kilometerstand }}</td>
-        <td>{{ f.einkaufspreis }}</td>
-        <td>{{ f.verkaufspreis }}</td>
-        <td>{{ f.favorit }}</td>
-        <td>{{ f.reserviert }}</td>
-      </tr>
-    </tbody>
-  </table>
+  <p v-if="fehler">{{ fehler }}</p>
+  <div class="table-scroll">
+    <table class="vehicle-table">
+      <thead>
+        <tr>
+          <th>FAHRZEUG</th>
+          <th>BAUJAHR</th>
+          <th>KILOMETERSTAND</th>
+          <th>EINKAUFSPREIS</th>
+          <th>VERKAUFSPREIS</th>
+          <th>STATUS</th>
+          <th><span class="sr-only">Aktionen</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="f in fahrzeuge" :key="f.id">
+          <td>
+            <div class="vehicle-cell">
+              <div class="vehicle-logo" :class="`brand-${f.marke.toLowerCase()}`">
+                {{ f.marke.slice(0, 1) }}
+              </div>
+              <div>
+                <strong>{{ f.marke }} {{ f.modell }}</strong
+                ><small
+                  >FZG-{{ String(f.id).padStart(4, '0') }}
+                  <span v-if="f.favorit" class="favorite">★ Favorit</span></small
+                >
+              </div>
+            </div>
+          </td>
+          <td>{{ f.baujahr }}</td>
+          <td>{{ numberFormat.format(f.kilometerstand) }} <span class="unit">km</span></td>
+          <td>{{ currencyFormat.format(f.einkaufspreis) }}</td>
+          <td class="selling-price">{{ currencyFormat.format(f.verkaufspreis) }}</td>
+          <td>
+            <span class="status-pill" :class="f.reserviert ? 'reserved' : 'available'"
+              ><i></i>{{ f.reserviert ? 'Reserviert' : 'Verfügbar' }}</span
+            >
+          </td>
+          <td>
+            <button class="row-menu" :aria-label="`Aktionen für ${f.marke} ${f.modell}`">
+              ···
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </template>
-
-<style scoped>
-th, td {
-  padding: 0 1.5rem;
-  text-align: left;
-}
-</style>
